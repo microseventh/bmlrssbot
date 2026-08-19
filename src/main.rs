@@ -59,6 +59,9 @@ async fn main() -> Result<()> {
                             .await
                         };
                         match result {
+                            Ok(()) if settings.dry_run => {
+                                count += 1;
+                            }
                             Ok(()) => {
                                 state
                                     .published
