@@ -75,7 +75,9 @@ async fn main() -> Result<()> {
                 Err(err) => error!(feed=%url, error=%err, "feed fetch failed"),
             }
         }
-        state.save(&settings.state_file)?;
+        if !settings.dry_run {
+            state.save(&settings.state_file)?;
+        }
         info!(published = count, "poll complete");
         if settings.once {
             break;
