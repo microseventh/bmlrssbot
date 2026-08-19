@@ -35,8 +35,11 @@ impl PostBatch {
 
     pub fn ready(&self, now_timestamp: i64, window_seconds: u64) -> bool {
         let window_seconds = i64::try_from(window_seconds).unwrap_or(i64::MAX);
-        self.earliest_timestamp
-            .is_none_or(|earliest| earliest <= now_timestamp - window_seconds)
+        self.earliest_timestamp.is_none_or(|earliest| {
+            // Some RSS providers publish timestamps ahead of the consumer clock. Treat
+            // those batches as ready instead of waiting until the source clock catches up.
+            earliest > now_timestamp || earliest <= now_timestamp - window_seconds
+        })
     }
 }
 
@@ -141,5 +144,12 @@ mod tests {
         let batch = batches.pop().unwrap();
         assert!(!batch.ready(1_599, 600));
         assert!(batch.ready(1_600, 600));
+    }
+
+    #[test]
+    fn future_source_timestamp_does_not_block_a_batch() {
+        let mut batches = build(vec![item("future", 2_000, "CHS")], 600);
+        let batch = batches.pop().unwrap();
+        assert!(batch.ready(1_000, 600));
     }
 }
