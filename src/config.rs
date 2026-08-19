@@ -9,6 +9,8 @@ pub struct Settings {
     pub poll_interval_seconds: u64,
     pub state_file: PathBuf,
     pub max_items_per_feed: usize,
+    pub max_posts_per_feed: usize,
+    pub group_window_seconds: u64,
     pub dry_run: bool,
     pub once: bool,
 }
@@ -31,6 +33,9 @@ impl Settings {
         if !dry_run && bot_token.is_empty() {
             bail!("TELEGRAM_BOT_TOKEN is required unless DRY_RUN=true");
         }
+        if !dry_run && !bot_token.contains(':') {
+            bail!("TELEGRAM_BOT_TOKEN is incomplete; expected '<bot_id>:<secret>'");
+        }
         if !dry_run && chat_id.is_empty() {
             bail!("TELEGRAM_CHAT_ID is required unless DRY_RUN=true");
         }
@@ -51,9 +56,15 @@ impl Settings {
                 .parse()
                 .context("invalid POLL_INTERVAL_SECONDS")?,
             state_file: PathBuf::from(env_string("STATE_FILE", "/data/state.json")),
-            max_items_per_feed: env_string("MAX_ITEMS_PER_FEED", "20")
+            max_items_per_feed: env_string("MAX_ITEMS_PER_FEED", "100")
                 .parse()
                 .context("invalid MAX_ITEMS_PER_FEED")?,
+            max_posts_per_feed: env_string("MAX_POSTS_PER_FEED", "5")
+                .parse()
+                .context("invalid MAX_POSTS_PER_FEED")?,
+            group_window_seconds: env_string("GROUP_WINDOW_SECONDS", "600")
+                .parse()
+                .context("invalid GROUP_WINDOW_SECONDS")?,
             dry_run,
             once: env::args().any(|arg| arg == "--once"),
         })

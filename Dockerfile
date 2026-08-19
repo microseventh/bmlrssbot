@@ -8,6 +8,7 @@ RUN touch src/main.rs && cargo build --release
 
 FROM debian:bookworm-slim
 RUN useradd --system --uid 10001 --create-home app
+RUN install -d -o app -g app /data
 COPY --from=builder /src/target/release/bmlrssbot /usr/local/bin/bmlrssbot
 USER app
 WORKDIR /data

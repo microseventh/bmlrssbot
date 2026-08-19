@@ -12,7 +12,8 @@ pub async fn publish(
     item: &FeedItem,
     text: &str,
 ) -> Result<()> {
-    let method = if item.image_url.is_some() {
+    let use_photo = item.image_url.is_some() && text.chars().count() <= MAX_CAPTION;
+    let method = if use_photo {
         "sendPhoto"
     } else {
         "sendMessage"
@@ -21,9 +22,10 @@ pub async fn publish(
         ("chat_id", chat_id.to_string()),
         ("parse_mode", "HTML".to_string()),
     ];
-    if let Some(url) = &item.image_url {
+    if use_photo {
+        let url = item.image_url.as_ref().expect("photo URL checked above");
         form.push(("photo", url.clone()));
-        form.push(("caption", text.chars().take(MAX_CAPTION).collect()));
+        form.push(("caption", text.to_string()));
     } else {
         form.push(("text", text.to_string()));
     }

@@ -35,7 +35,9 @@ cargo run --release -- --once
 | `RSS_FEEDS` | 是 | 逗号分隔的 RSS/Atom URL |
 | `POLL_INTERVAL_SECONDS` | 否 | 轮询间隔，默认 300 秒 |
 | `STATE_FILE` | 否 | 已发布 UID 文件，Docker 默认 `/data/state.json` |
-| `MAX_ITEMS_PER_FEED` | 否 | 每个源每轮最多读取条数，默认 20 |
+| `MAX_ITEMS_PER_FEED` | 否 | 每个源每轮最多读取条数，默认 100，用于完整覆盖聚合窗口 |
+| `MAX_POSTS_PER_FEED` | 否 | 每个源只观察最新的发布批次，默认 5，避免首次启动倒灌历史 |
+| `GROUP_WINDOW_SECONDS` | 否 | 同字幕组、番剧和集数的语言版本聚合窗口，默认 600 秒；窗口结束后发布 |
 | `DRY_RUN` | 否 | `true` 时只抓取和渲染，不调用 Telegram |
 
 程序使用条目的 id/guid/link 生成 SHA-256 UID，成功发布后才写入状态，因此网络或 Telegram 失败不会被错误标记为已发布。
