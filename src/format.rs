@@ -53,13 +53,21 @@ fn magnet_link(item: &FeedItem) -> String {
 
 fn magnet_section(item: &FeedItem) -> String {
     let label = release_label(item);
-    let magnet = magnet_link(item);
-    if magnet.is_empty() {
-        format!("🧲 <b>「{}」磁力链接：</b>\n暂无", encode_text(&label))
+    let label = if item.link.is_empty() {
+        encode_text(&label).to_string()
     } else {
         format!(
-            "🧲 <b>「{}」磁力链接：</b>\n<code>{}</code>",
-            encode_text(&label),
+            "<a href=\"{}\">{}</a>",
+            encode_quoted_attribute(&item.link),
+            encode_text(&label)
+        )
+    };
+    let magnet = magnet_link(item);
+    if magnet.is_empty() {
+        format!("🧲 <b>「{label}」磁力链接：</b>\n暂无")
+    } else {
+        format!(
+            "🧲 <b>「{label}」磁力链接：</b>\n<code>{}</code>",
             encode_text(&magnet)
         )
     }
@@ -181,6 +189,7 @@ mod tests {
         assert!(text.contains("A &lt;title&gt;"));
         assert!(text.contains("#A_title"));
         assert!(text.contains("简体内嵌"));
+        assert!(text.contains("「<a href=\"https://example.com/?a=1&amp;b=2\">简体内嵌</a>」"));
         assert!(text.contains("<code>magnet:?xt=urn:btih:abcdef</code>"));
         assert!(text.contains("https://example.com/1.torrent"));
     }
