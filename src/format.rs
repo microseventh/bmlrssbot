@@ -64,7 +64,11 @@ fn title_language_label(title: &str) -> Option<String> {
 fn language_label(item: &FeedItem) -> String {
     let mut languages: Vec<(String, String, String)> = Vec::new();
     for value in &item.languages {
-        let code = value.trim().to_ascii_uppercase();
+        let code = match value.trim().to_ascii_uppercase().as_str() {
+            "JA" => "JP".to_string(),
+            "KO" => "KR".to_string(),
+            code => code.to_string(),
+        };
         if code.is_empty() || languages.iter().any(|(seen, _, _)| seen == &code) {
             continue;
         }
@@ -74,6 +78,16 @@ fn language_label(item: &FeedItem) -> String {
         languages.push((code, short, full));
     }
 
+    if languages.len() > 3 {
+        let has_chinese = languages
+            .iter()
+            .any(|(code, _, _)| matches!(code.as_str(), "CHS" | "CHT" | "ZH"));
+        return if has_chinese {
+            "中文多语".to_string()
+        } else {
+            "多语字幕".to_string()
+        };
+    }
     if languages.len() == 1 {
         return languages[0].2.clone();
     }
@@ -184,7 +198,7 @@ fn torrent_link(item: &FeedItem) -> Option<String> {
         None
     } else {
         Some(format!(
-            "<a href=\"{}\">{}</a>",
+            "「<a href=\"{}\">{}</a>」",
             encode_quoted_attribute(&item.torrent_url),
             torrent_label(item)
         ))
@@ -207,39 +221,28 @@ pub fn render(items: &[FeedItem], _max_len: usize) -> String {
     } else {
         format!(" EP {}", encode_text(&item.episode))
     };
-    let mut parts = vec![format!("<b>{}</b>{episode}", encode_text(display_title))];
-    let anime_tag = hashtag(display_title);
-    if !anime_tag.is_empty() {
-        let resolution = if item.resolution.is_empty() {
-            String::new()
-        } else {
-            format!(" · {}", encode_text(&item.resolution))
-        };
-        parts.push(format!(
-            "📺 <b>番组：</b> #{}{resolution}",
-            encode_text(&anime_tag)
-        ));
-    }
+    let mut parts = vec![format!("📽️ {}{episode}", encode_text(display_title))];
+    let mut metadata = Vec::new();
     let group_tag = hashtag(&item.group_name);
     if !group_tag.is_empty() {
-        parts.push(format!("👤 <b>发布组：</b> #{}", encode_text(&group_tag)));
+        metadata.push(format!("👤 #{}", encode_text(&group_tag)));
     }
     if !item.published.is_empty() {
-        parts.push(format!(
-            "📅 <b>发布时间：</b> {}",
-            encode_text(&item.published)
-        ));
+        metadata.push(format!("📅 {}", encode_text(&item.published)));
+    }
+    if !metadata.is_empty() {
+        parts.push(metadata.join("\n"));
     }
     parts.push(
         items
             .iter()
             .map(magnet_section)
             .collect::<Vec<_>>()
-            .join("\n\n"),
+            .join("\n"),
     );
     let torrent_links = items.iter().filter_map(torrent_link).collect::<Vec<_>>();
     if !torrent_links.is_empty() {
-        parts.push(format!("🌎 <b>种子链接</b>\n{}", torrent_links.join("   ")));
+        parts.push(format!("🌎 种子链接：{}", torrent_links.join("")));
     }
     parts.join("\n\n")
 }
@@ -262,7 +265,6 @@ mod tests {
             group_slug: "group".into(),
             languages: vec!["CHS".into()],
             subtitle: "EMBEDDED".into(),
-            resolution: "1080p".into(),
             link: "https://example.com/?a=1&b=2".into(),
             torrent_url: "https://example.com/1.torrent".into(),
             info_hash: "abcdef".into(),
@@ -277,7 +279,7 @@ mod tests {
     fn escapes_html_and_link_attributes() {
         let text = render(&[item()], MAX_MESSAGE);
         assert!(text.contains("A &lt;title&gt;"));
-        assert!(text.contains("#A_title"));
+        assert!(text.contains("📽️ A &lt;title&gt; EP 7\n\n👤 #Group"));
         assert!(text.contains("简体内嵌"));
         assert!(text.contains("「<a href=\"https://example.com/?a=1&amp;b=2\">简体内嵌</a>」"));
         assert!(text.contains("<code>magnet:?xt=urn:btih:abcdef</code>"));
@@ -295,8 +297,8 @@ mod tests {
         assert_eq!(text.matches("https://example.com/1.torrent").count(), 2);
         assert!(text.contains("简日内嵌"));
         assert!(text.contains("繁日内嵌"));
-        assert!(text.contains("简日</a>"));
-        assert!(text.contains("繁日</a>"));
+        assert!(text.contains("「<a href=\"https://example.com/1.torrent\">简日</a>」「"));
+        assert!(text.contains("繁日</a>」"));
         assert!(text.chars().count() <= super::MAX_CAPTION);
     }
 
@@ -353,6 +355,25 @@ mod tests {
         release.languages = vec!["DE".into(), "EN".into(), "DE".into()];
         release.subtitle = "INTERNAL".into();
         assert_eq!(release_label(&release), "德英内封");
+    }
+
+    #[test]
+    fn abbreviates_more_than_three_unique_languages() {
+        let mut release = item();
+
+        release.languages = vec!["CHS".into(), "JP".into(), "EN".into()];
+        release.subtitle = "EMBEDDED".into();
+        assert_eq!(release_label(&release), "简日英内嵌");
+
+        release.languages = vec!["EN".into(), "CHS".into(), "CHT".into(), "ID".into()];
+        release.subtitle = "INTERNAL".into();
+        assert_eq!(release_label(&release), "中文多语内封");
+
+        release.languages = vec!["JP".into(), "EN".into(), "DE".into(), "FR".into()];
+        assert_eq!(release_label(&release), "多语字幕内封");
+
+        release.languages = vec!["JP".into(), "JA".into(), "EN".into(), "DE".into()];
+        assert_eq!(release_label(&release), "日英德内封");
     }
 
     #[test]

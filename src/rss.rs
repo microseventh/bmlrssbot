@@ -20,7 +20,6 @@ pub struct FeedItem {
     pub group_slug: String,
     pub languages: Vec<String>,
     pub subtitle: String,
-    pub resolution: String,
     pub link: String,
     pub torrent_url: String,
     pub info_hash: String,
@@ -50,7 +49,6 @@ struct AnibtFields {
     group_slug: String,
     languages: Vec<String>,
     subtitle: String,
-    resolution: String,
     torrent_url: String,
     info_hash: String,
     magnet: String,
@@ -103,7 +101,6 @@ fn anibt_fields(content: &[u8]) -> HashMap<String, AnibtFields> {
                     group_slug: child_text(item, "groupSlug"),
                     languages,
                     subtitle: child_text(item, "subtitle"),
-                    resolution: child_text(item, "resolution"),
                     torrent_url: child_text(item, "torrentUrl"),
                     info_hash: torrent
                         .map(|node| child_text(node, "infohash"))
@@ -192,7 +189,6 @@ pub fn parse_feed(content: &[u8], _source_url: &str, limit: usize) -> Result<Vec
                 group_slug: fields.group_slug,
                 languages: fields.languages,
                 subtitle: fields.subtitle,
-                resolution: fields.resolution,
                 link,
                 torrent_url: fields.torrent_url,
                 info_hash: fields.info_hash,

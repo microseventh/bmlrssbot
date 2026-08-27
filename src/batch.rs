@@ -101,7 +101,6 @@ mod tests {
             group_slug: "group".into(),
             languages: vec![language.into(), "JP".into()],
             subtitle: "EMBEDDED".into(),
-            resolution: "1080p".into(),
             link: String::new(),
             torrent_url: String::new(),
             info_hash: uid.into(),
